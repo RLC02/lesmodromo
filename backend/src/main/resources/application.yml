@@ -1,0 +1,41 @@
+# Nenhuma senha ou URL de serviço fica escrita aqui: tudo vem de variáveis de ambiente.
+# No Render: aba Environment. No seu PC: arquivo .env na pasta backend (copie do .env.example).
+
+spring:
+  application:
+    name: lesmodromo-api
+  config:
+    import: optional:file:.env[.properties]
+
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+      auto-index-creation: false # os índices são criados pelo VerificadorDeConexoes, depois que o Atlas responde
+
+  rabbitmq:
+    addresses: ${RABBITMQ_URL}
+    connection-timeout: 5s
+    listener:
+      simple:
+        # RETRY 3b: consumidor que falha tenta de novo até 3 vezes (1 s, 2 s...).
+        # Depois disso a mensagem é rejeitada sem voltar para a fila e cai na dead letter (lesmodromo.falhas).
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 5s
+
+server:
+  port: ${PORT:8080} # o Render informa a porta pela variável PORT
+
+lesmodromo:
+  versao: ${APP_VERSAO:local} # a pipeline grava o commit na imagem Docker
+  simular-falhas-na-subida: ${SIMULAR_FALHAS_NA_SUBIDA:false}
+  cors-origens: ${FRONTEND_URL:*}
+  clima-url: https://api.open-meteo.com
+
+logging:
+  level:
+    com.lesmodromo: INFO
