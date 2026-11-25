@@ -18,8 +18,7 @@ export async function chamarApi(caminho, { metodo = 'GET', corpo, tentativas = 4
     try {
       const resposta = await fetch(`${API_URL}${caminho}`, {
         method: metodo,
-        // Só manda Content-Type quando tem corpo: GET simples não precisa de preflight de CORS
-        headers: corpo ? { 'Content-Type': 'application/json' } : undefined,
+        headers: { 'Content-Type': 'application/json' },
         body: corpo ? JSON.stringify(corpo) : undefined,
         signal: AbortSignal.timeout(15000),
       });

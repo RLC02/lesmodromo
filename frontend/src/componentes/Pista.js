@@ -132,8 +132,9 @@ export default function Pista({ lesmas, resultado, idDaLargada, onVencedoraChego
 const estilos = StyleSheet.create({
   moldura: {
     backgroundColor: cores.musgo,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 24,
+    padding: 16,
+    paddingTop: 20,
   },
   gramado: {
     height: 10,
