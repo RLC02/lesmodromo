@@ -107,7 +107,7 @@ As etapas 1 (testes) e 2 (imagem) devem passar. A etapa 3 vai falhar, porque o R
 3. Preencha:
    - **Name:** `lesmodromo-api` (vira parte da URL)
    - **Instance Type:** Free
-   - **Environment Variables:** `MONGODB_URI` e `RABBITMQ_URL`
+   - **Environment Variables:** `MONGODB_URI`, `RABBITMQ_URL` e `FRONTEND_URL`. O `FRONTEND_URL` é a URL do site na Vercel (ex: `https://lesmodromo.vercel.app`, sem barra no final). Se o site ainda não existe, crie essa variável depois do passo 7.
    - **Health Check Path** (em Advanced): `/api/info`
 4. Clique em **Deploy** e espere. O Spring leva perto de 1 minuto pra subir no plano gratuito.
 5. Copie a URL do topo (ex: `https://lesmodromo-api.onrender.com`). Esse é o **API_URL**, sem a barra no final.
@@ -298,5 +298,6 @@ Repetir uma ação pode duplicar coisa. O projeto se protege disso em dois ponto
 - **Etapa 3 dá timeout:** veja os logs do Render. Se aparecer falta de memória, confira se o `ENTRYPOINT` do Dockerfile ficou com os ajustes de memória.
 - **Etapa 4 falha com "Project not found":** VERCEL_ORG_ID ou VERCEL_PROJECT_ID errado.
 - **No seu PC, o login não "pega" (volta a pedir pra entrar):** confira se o front está em http://localhost:8081 e o `frontend/.env` aponta pra http://localhost:8080. O backend só libera essas origens com cookie (`FRONTEND_URL` muda isso).
+- **Na Vercel, o login ou a corrida dá "Invalid CORS request" (ou "O servidor recusou o endereço deste site"):** falta a variável `FRONTEND_URL` no Environment do Render, com a URL exata que aparece na barra do navegador (sem barra no final). Para usar também no seu PC, separe por vírgula: `https://lesmodromo.vercel.app,http://localhost:8081`. O Render reinicia sozinho ao salvar.
 - **Na Vercel, `/api/...` dá 404 ou erro de proxy:** confira o secret `API_URL` (a URL do Render, sem barra no final). A pipeline grava ela no `vercel.json` e falha se não conseguir.
 - **O jogo abre mas diz que o servidor não respondeu:** o secret API_URL está errado. Corrija e rode a pipeline de novo, porque a URL entra no build.

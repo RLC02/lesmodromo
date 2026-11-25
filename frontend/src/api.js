@@ -32,11 +32,11 @@ export async function chamarApi(caminho, { metodo = 'GET', corpo, tentativas = 4
       if (resposta.status >= 500) throw new Error(`servidor respondeu ${resposta.status}`);
 
       // 204 (ex: logout) não tem corpo
-      const dados = resposta.status === 204 ? null : await resposta.json();
+      const dados = resposta.status === 204 ? null : await lerCorpo(resposta);
 
       // 4xx = erro de quem chamou (ex: senha errada). Repetir não adianta.
       if (!resposta.ok) {
-        const erro = new Error(dados?.erro || 'Pedido inválido');
+        const erro = new Error(dados?.erro || mensagemDeErro(resposta.status, dados?.texto));
         erro.semRetry = true;
         erro.status = resposta.status;
         throw erro;
@@ -51,6 +51,24 @@ export async function chamarApi(caminho, { metodo = 'GET', corpo, tentativas = 4
       await esperar(espera);
     }
   }
+}
+
+// Nem toda resposta é JSON (ex: o Spring recusa CORS com texto puro). Lê como texto e tenta converter.
+async function lerCorpo(resposta) {
+  const texto = await resposta.text();
+  if (!texto) return null;
+  try {
+    return JSON.parse(texto);
+  } catch {
+    return { texto };
+  }
+}
+
+function mensagemDeErro(status, texto) {
+  if (texto?.includes('CORS')) {
+    return 'O servidor recusou o endereço deste site. Coloque a URL da Vercel na variável FRONTEND_URL do Render.';
+  }
+  return `O servidor recusou o pedido (erro ${status}).`;
 }
 
 // Id gerado no navegador para cada aposta. Se o retry mandar a mesma aposta duas vezes,
