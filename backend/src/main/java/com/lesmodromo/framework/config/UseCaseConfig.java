@@ -6,11 +6,19 @@ import com.lesmodromo.core.gateway.CorridaGateway;
 import com.lesmodromo.core.gateway.EventoGateway;
 import com.lesmodromo.core.gateway.NarracaoGateway;
 import com.lesmodromo.core.gateway.RankingGateway;
+import com.lesmodromo.core.gateway.SenhaGateway;
+import com.lesmodromo.core.gateway.SessaoGateway;
+import com.lesmodromo.core.gateway.UsuarioGateway;
 import com.lesmodromo.core.gateway.Transacao;
+import com.lesmodromo.core.usecase.AbrirSessao;
 import com.lesmodromo.core.usecase.AtualizarRanking;
+import com.lesmodromo.core.usecase.CadastrarUsuario;
 import com.lesmodromo.core.usecase.ConsultarClima;
 import com.lesmodromo.core.usecase.ConsultarCorrida;
 import com.lesmodromo.core.usecase.ConsultarRanking;
+import com.lesmodromo.core.usecase.FazerLogin;
+import com.lesmodromo.core.usecase.FazerLogout;
+import com.lesmodromo.core.usecase.IdentificarUsuario;
 import com.lesmodromo.core.usecase.LargarCorrida;
 import com.lesmodromo.core.usecase.ListarNarracoes;
 import com.lesmodromo.core.usecase.NarrarCorrida;
@@ -19,6 +27,7 @@ import com.lesmodromo.core.usecase.ProcessarCorrida;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Clock;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -31,6 +40,36 @@ public class UseCaseConfig {
     @Bean
     public Sorteio sorteio() {
         return () -> ThreadLocalRandom.current().nextDouble();
+    }
+
+    @Bean
+    public Clock relogio() {
+        return Clock.systemUTC();
+    }
+
+    @Bean
+    public AbrirSessao abrirSessao(SessaoGateway sessoes, Clock relogio) {
+        return new AbrirSessao(sessoes, relogio);
+    }
+
+    @Bean
+    public CadastrarUsuario cadastrarUsuario(UsuarioGateway usuarios, SenhaGateway senhas, AbrirSessao abrirSessao) {
+        return new CadastrarUsuario(usuarios, senhas, abrirSessao);
+    }
+
+    @Bean
+    public FazerLogin fazerLogin(UsuarioGateway usuarios, SenhaGateway senhas, AbrirSessao abrirSessao) {
+        return new FazerLogin(usuarios, senhas, abrirSessao);
+    }
+
+    @Bean
+    public FazerLogout fazerLogout(SessaoGateway sessoes) {
+        return new FazerLogout(sessoes);
+    }
+
+    @Bean
+    public IdentificarUsuario identificarUsuario(SessaoGateway sessoes, UsuarioGateway usuarios, Clock relogio) {
+        return new IdentificarUsuario(sessoes, usuarios, relogio);
     }
 
     @Bean

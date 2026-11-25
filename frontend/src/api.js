@@ -1,8 +1,9 @@
-// A URL da API NÃO fica escrita no código.
-// Ela vem da variável EXPO_PUBLIC_API_URL:
-//  - no seu PC: arquivo .env (copie do .env.example)
-//  - no deploy: a pipeline cria o .env a partir do secret API_URL do GitHub
+// A URL da API NÃO fica escrita no código. Ela vem da variável EXPO_PUBLIC_API_URL:
+//  - no seu PC: arquivo .env com a URL do backend local (http://localhost:8080)
+//  - no deploy: a pipeline grava "proxy". Aí o front chama /api no próprio domínio da Vercel,
+//    e a Vercel repassa para o Render. Assim o cookie de login é do mesmo site do front.
 export const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const BASE = API_URL === 'proxy' ? '' : API_URL;
 
 export const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -16,23 +17,28 @@ export async function chamarApi(caminho, { metodo = 'GET', corpo, tentativas = 4
     aoTentar?.(tentativa, tentativas);
 
     try {
-      const resposta = await fetch(`${API_URL}${caminho}`, {
+      const resposta = await fetch(`${BASE}${caminho}`, {
         method: metodo,
         // Só manda Content-Type quando tem corpo: GET simples não precisa de preflight de CORS
         headers: corpo ? { 'Content-Type': 'application/json' } : undefined,
         body: corpo ? JSON.stringify(corpo) : undefined,
+        // Manda e recebe o cookie de sessão. O token fica só no cookie HttpOnly:
+        // o JavaScript não lê nem guarda nada (nada de localStorage).
+        credentials: 'include',
         signal: AbortSignal.timeout(15000),
       });
 
       // 5xx = problema no servidor, vale tentar de novo
       if (resposta.status >= 500) throw new Error(`servidor respondeu ${resposta.status}`);
 
-      const dados = await resposta.json();
+      // 204 (ex: logout) não tem corpo
+      const dados = resposta.status === 204 ? null : await resposta.json();
 
-      // 4xx = erro de quem chamou (ex: nome vazio). Repetir não adianta.
+      // 4xx = erro de quem chamou (ex: senha errada). Repetir não adianta.
       if (!resposta.ok) {
-        const erro = new Error(dados.erro || 'Pedido inválido');
+        const erro = new Error(dados?.erro || 'Pedido inválido');
         erro.semRetry = true;
+        erro.status = resposta.status;
         throw erro;
       }
 

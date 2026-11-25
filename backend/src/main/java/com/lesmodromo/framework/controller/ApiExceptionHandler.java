@@ -1,6 +1,7 @@
 package com.lesmodromo.framework.controller;
 
 import com.lesmodromo.core.exception.CorridaNaoEncontradaException;
+import com.lesmodromo.core.exception.NaoAutenticadoException;
 import com.lesmodromo.core.exception.RegraDeNegocioException;
 import com.lesmodromo.framework.controller.dto.ErroResponse;
 import org.slf4j.Logger;
@@ -25,6 +26,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(RegraDeNegocioException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErroResponse regraDeNegocio(RegraDeNegocioException erro) {
+        return new ErroResponse(erro.getMessage());
+    }
+
+    @ExceptionHandler(NaoAutenticadoException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErroResponse naoAutenticado(NaoAutenticadoException erro) {
         return new ErroResponse(erro.getMessage());
     }
 

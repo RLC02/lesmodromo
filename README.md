@@ -91,6 +91,21 @@ Retry sem duplicar:
 
 A transação fica em `AtualizarRanking`. Marcar a corrida como contada e somar os pontos acontecem juntos, pela porta `core/gateway/Transacao`, implementada em `framework/persistence/TransacaoMongo` com uma transação do MongoDB.
 
+## Login com cookie (sem localStorage)
+
+Pra apostar é preciso entrar na conta. A sessão fica só num cookie, e o navegador não guarda nada em localStorage nem em sessionStorage.
+
+- **Cadastro e login:** `POST /api/auth/cadastro` e `POST /api/auth/login` conferem o nome e a senha. A senha é guardada só como hash BCrypt.
+- **O cookie:** o servidor cria uma sessão e devolve o cookie `lesmodromo_sessao`. Ele é `HttpOnly` (o JavaScript não consegue ler, o que protege contra XSS), `SameSite=Lax` (não vai junto em POST vindo de outro site, o que protege contra CSRF) e `Secure` em produção.
+- **O token:** é aleatório. No MongoDB fica só o hash dele (coleção `sessoes`), com um índice TTL que apaga a sessão sozinho quando ela vence (7 dias).
+- **Quem está logado:** como o front não lê o cookie, ele pergunta em `GET /api/auth/eu`.
+- **Sair:** `POST /api/auth/logout` apaga a sessão no banco e o cookie.
+- **A aposta:** `POST /api/corridas` responde 401 sem sessão válida, e o nome do apostador vem do login.
+
+No core ficam os casos de uso `CadastrarUsuario`, `FazerLogin`, `FazerLogout`, `IdentificarUsuario` e `AbrirSessao`, com as portas `UsuarioGateway`, `SessaoGateway` e `SenhaGateway`. Na framework ficam o MongoDB, o BCrypt (`security/SenhaBCrypt`) e o cookie (`security/CookieDeSessao`).
+
+Em produção, o front chama `/api` no próprio domínio da Vercel, e a Vercel repassa pro Render (rewrite no `frontend/vercel.json`). Assim o cookie é do mesmo site do front e funciona em qualquer navegador. Cookie de outro domínio é bloqueado pelo Safari e pela aba anônima do Chrome. A URL do Render não fica no código: a pipeline grava ela no `vercel.json` na hora do build, a partir do secret `API_URL`.
+
 ## Pipeline
 
 A cada push na `main`:
@@ -110,7 +125,7 @@ O passo a passo completo, com o roteiro da apresentação, está em [PASSO_A_PAS
 
 ```bash
 cd frontend
-cp .env.example .env   # EXPO_PUBLIC_API_URL=http://localhost:8080
+cp .env.example .env   # EXPO_PUBLIC_API_URL=http://localhost:8080 (o backend aceita o front em localhost:8081)
 npm install
 npm start              # abre no navegador
 ```

@@ -29,11 +29,14 @@ spring:
 
 server:
   port: ${PORT:8080} # o Render informa a porta pela variável PORT
+  # O Render (e a Vercel na frente dele) recebem https e repassam como http.
+  # Com isso o Spring lê o X-Forwarded-Proto e sabe que a requisição original era https (cookie Secure).
+  forward-headers-strategy: framework
 
 lesmodromo:
   versao: ${APP_VERSAO:local} # a pipeline grava o commit na imagem Docker
   simular-falhas-na-subida: ${SIMULAR_FALHAS_NA_SUBIDA:false}
-  cors-origens: ${FRONTEND_URL:*}
+  cors-origens: ${FRONTEND_URL:http://localhost:8081,http://localhost:19006} # front rodando no seu PC
   clima-url: https://api.open-meteo.com
 
 logging:

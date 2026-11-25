@@ -170,7 +170,7 @@ Em **Actions → Pipeline Lesmódromo → Run workflow**. As quatro etapas, em s
 
 No final da etapa 4, o log mostra a URL da Vercel. Abra e jogue.
 
-Opcional: no Render, crie a variável `FRONTEND_URL` com a URL da Vercel. Assim o CORS só aceita chamadas do seu front.
+Não precisa configurar CORS pra produção: o front chama `/api` no próprio domínio da Vercel, e a Vercel repassa pro Render. A pipeline monta esse repasse com o secret `API_URL`.
 
 ---
 
@@ -200,7 +200,15 @@ Depois abra o painel da CloudAMQP (**RabbitMQ Manager**) e mostre o exchange em 
 
 Depois mostre o código lendo variáveis de ambiente: `frontend/src/api.js` e `backend/src/main/resources/application.yml`.
 
-**7. O retry.** Detalhado abaixo.
+**7. O login com cookie.** Crie uma conta no site e aperte F12. Mostre três coisas:
+
+- Em **Application → Cookies**, o cookie `lesmodromo_sessao`, com HttpOnly marcado e SameSite Lax.
+- Em **Application → Local Storage**, que não tem nada.
+- No **Console**, que `document.cookie` não mostra o token. É o HttpOnly funcionando.
+
+Recarregue a página e mostre que você continua logado, porque o front pergunta em `/api/auth/eu`. Depois clique em Sair e mostre que o cookie sumiu. No Atlas, mostre as coleções `usuarios` (senha só em hash BCrypt) e `sessoes` (só o hash do token).
+
+**8. O retry.** Detalhado abaixo.
 
 ---
 
@@ -289,4 +297,6 @@ Repetir uma ação pode duplicar coisa. O projeto se protege disso em dois ponto
 - **Render não consegue baixar a imagem:** o repositório no Docker Hub está privado. Deixe público.
 - **Etapa 3 dá timeout:** veja os logs do Render. Se aparecer falta de memória, confira se o `ENTRYPOINT` do Dockerfile ficou com os ajustes de memória.
 - **Etapa 4 falha com "Project not found":** VERCEL_ORG_ID ou VERCEL_PROJECT_ID errado.
+- **No seu PC, o login não "pega" (volta a pedir pra entrar):** confira se o front está em http://localhost:8081 e o `frontend/.env` aponta pra http://localhost:8080. O backend só libera essas origens com cookie (`FRONTEND_URL` muda isso).
+- **Na Vercel, `/api/...` dá 404 ou erro de proxy:** confira o secret `API_URL` (a URL do Render, sem barra no final). A pipeline grava ela no `vercel.json` e falha se não conseguir.
 - **O jogo abre mas diz que o servidor não respondeu:** o secret API_URL está errado. Corrija e rode a pipeline de novo, porque a URL entra no build.

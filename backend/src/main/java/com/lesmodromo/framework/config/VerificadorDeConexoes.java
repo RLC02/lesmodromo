@@ -2,6 +2,8 @@ package com.lesmodromo.framework.config;
 
 import com.lesmodromo.framework.persistence.document.CorridaDocument;
 import com.lesmodromo.framework.persistence.document.JogadorDocument;
+import com.lesmodromo.framework.persistence.document.SessaoDocument;
+import com.lesmodromo.framework.persistence.document.UsuarioDocument;
 import com.lesmodromo.framework.resilience.RetryExecutor;
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -71,5 +73,11 @@ public class VerificadorDeConexoes {
                 .ensureIndex(new Index().on("idCliente", Sort.Direction.ASC).unique().sparse());
         mongoTemplate.indexOps(JogadorDocument.class)
                 .ensureIndex(new Index().on("nome", Sort.Direction.ASC).unique());
+        // nome de usuário único, sem diferenciar maiúsculas
+        mongoTemplate.indexOps(UsuarioDocument.class)
+                .ensureIndex(new Index().on("nomeChave", Sort.Direction.ASC).unique());
+        // TTL: o MongoDB apaga sozinho a sessão quando passa do expiraEm
+        mongoTemplate.indexOps(SessaoDocument.class)
+                .ensureIndex(new Index().on("expiraEm", Sort.Direction.ASC).expire(0));
     }
 }

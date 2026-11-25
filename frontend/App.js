@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -19,6 +18,7 @@ import Lesma from './src/componentes/Lesma';
 import Icone from './src/componentes/Icone';
 import Podio from './src/componentes/Podio';
 import Bastidores from './src/componentes/Bastidores';
+import Acesso from './src/componentes/Acesso';
 
 export default function App() {
   // Fontes ficam em assets/fonts (licença OFL). Bagel Fat One no logo, Bricolage Grotesque no resto.
@@ -39,7 +39,8 @@ export default function App() {
   const [narracoes, setNarracoes] = useState([]);
   const [previsoes, setPrevisoes] = useState({});
 
-  const [jogador, setJogador] = useState('');
+  // undefined = ainda verificando, null = ninguém logado. Vem do servidor, não de localStorage.
+  const [usuario, setUsuario] = useState(undefined);
   const [cidade, setCidade] = useState('SAO_PAULO');
   const [lesma, setLesma] = useState(null);
   const [modoCaos, setModoCaos] = useState(false);
@@ -68,6 +69,7 @@ export default function App() {
         setInfo(dados);
         setServidor({ estado: 'online', texto: 'Servidor no ar' });
         carregarPainel();
+        verificarLogin();
       })
       .catch((e) =>
         setServidor({
@@ -92,6 +94,18 @@ export default function App() {
       .catch(() => setPrevisoes((p) => ({ ...p, [cidade]: { erro: true, quando: 0 } })));
   }, [cidade, info]);
 
+  // O cookie é HttpOnly: o front não consegue lê-lo. Então pergunta ao servidor quem está logado.
+  function verificarLogin() {
+    chamarApi('/api/auth/eu', { tentativas: 2 })
+      .then(setUsuario)
+      .catch(() => setUsuario(null));
+  }
+
+  async function sair() {
+    await chamarApi('/api/auth/logout', { metodo: 'POST', tentativas: 2 }).catch(() => {});
+    setUsuario(null);
+  }
+
   function carregarPainel() {
     chamarApi('/api/ranking', { tentativas: 3 }).then(setRanking).catch(() => {});
     chamarApi('/api/narracoes', { tentativas: 3 }).then(setNarracoes).catch(() => {});
@@ -110,7 +124,7 @@ export default function App() {
     try {
       const pule = await chamarApi('/api/corridas', {
         metodo: 'POST',
-        corpo: { jogador, lesma, cidade, modoCaos, idCliente: novoIdDaAposta() },
+        corpo: { lesma, cidade, modoCaos, idCliente: novoIdDaAposta() }, // o nome vem do login (cookie)
       });
       // Se já voltou finalizada, é porque o RabbitMQ estava fora e a API fez o fallback
       const semMensageria = pule.status === 'FINALIZADA';
@@ -118,7 +132,12 @@ export default function App() {
       setCorrida(pule);
       await acompanhar(pule, minhaLargada, semMensageria);
     } catch (e) {
-      setErro(e.message);
+      if (e.status === 401) {
+        setUsuario(null);
+        setErro('Sua sessão terminou. Entre de novo para apostar.');
+      } else {
+        setErro(e.message);
+      }
     } finally {
       if (largadaAtual.current === minhaLargada) setEnviando(false);
     }
@@ -148,7 +167,7 @@ export default function App() {
   const nomeDaCidade = info?.cidades.find((c) => c.codigo === cidade)?.nome ?? '';
   const finalizada = corrida?.status === 'FINALIZADA';
   const vencedora = info?.lesmas.find((l) => l.codigo === corrida?.vencedora);
-  const podeApostar = servidor.estado === 'online' && jogador.trim() && lesma && !enviando;
+  const podeApostar = servidor.estado === 'online' && usuario && lesma && !enviando;
   const posicaoDaSua = corrida?.resultado?.find((r) => r.lesma === corrida.lesmaEscolhida)?.posicao;
   const previsao = previsoes[cidade];
   const vantagens = previsao?.dados?.vantagens ?? [];
@@ -170,13 +189,25 @@ export default function App() {
         <Text style={[estilos.logo, estreito && estilos.logoPequeno]} accessibilityRole="header">
           Lesmódromo
         </Text>
-        <View style={[estilos.servidor, estilos[`servidor_${servidor.estado}`]]}>
-          {servidor.estado === 'acordando' ? (
-            <ActivityIndicator size="small" color={cores.tinta} />
-          ) : (
-            <View style={[estilos.luz, servidor.estado === 'erro' && { backgroundColor: cores.erro }]} />
+        <View style={estilos.ladoDireito}>
+          {usuario && (
+            <View style={estilos.conta}>
+              <Text style={estilos.contaTexto}>
+                Olá, <Text style={estilos.contaNome}>{usuario.nome}</Text>
+              </Text>
+              <Pressable onPress={sair} style={({ hovered }) => [estilos.sair, hovered && estilos.sairSobre]}>
+                <Text style={estilos.sairTexto}>Sair</Text>
+              </Pressable>
+            </View>
           )}
-          <Text style={estilos.servidorTexto}>{servidor.texto}</Text>
+          <View style={[estilos.servidor, estilos[`servidor_${servidor.estado}`]]}>
+            {servidor.estado === 'acordando' ? (
+              <ActivityIndicator size="small" color={cores.tinta} />
+            ) : (
+              <View style={[estilos.luz, servidor.estado === 'erro' && { backgroundColor: cores.erro }]} />
+            )}
+            <Text style={estilos.servidorTexto}>{servidor.texto}</Text>
+          </View>
         </View>
       </View>
 
@@ -298,7 +329,7 @@ export default function App() {
               </Grade>
             </Secao>
 
-            <Secao numero={3} titulo="Confirme e largue">
+            <Secao numero={3} titulo={usuario ? 'Confirme e largue' : 'Entre e largue'}>
               <Text style={estilos.resumo}>
                 {lesmaEscolhida ? (
                   <>
@@ -310,16 +341,16 @@ export default function App() {
                 )}
               </Text>
 
+              {usuario === null && <Acesso onEntrou={setUsuario} />}
+
               <View style={[estilos.linhaAposta, !largo && estilos.linhaApostaEmPe]}>
-                <TextInput
-                  style={[estilos.campo, largo && { flex: 1 }]}
-                  placeholder="Seu nome no ranking"
-                  placeholderTextColor="#8A9A8E"
-                  value={jogador}
-                  onChangeText={setJogador}
-                  maxLength={20}
-                  onSubmitEditing={() => podeApostar && apostar()}
-                />
+                {usuario && (
+                  <View style={[estilos.apostador, largo && { flex: 1 }]}>
+                    <Text style={estilos.apostadorTexto}>
+                      Apostando como <Text style={estilos.resumoForte}>{usuario.nome}</Text>
+                    </Text>
+                  </View>
+                )}
                 <Pressable
                   onPress={apostar}
                   disabled={!podeApostar}
@@ -613,6 +644,21 @@ const estilos = StyleSheet.create({
   },
   logo: { fontFamily: fontes.logo, fontSize: 34, lineHeight: 40, color: cores.musgo },
   logoPequeno: { fontSize: 28, lineHeight: 34 },
+  ladoDireito: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
+  conta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  contaTexto: { fontFamily: fontes.texto, fontSize: 15, color: cores.tintaSuave },
+  contaNome: { fontFamily: fontes.forte, color: cores.tinta },
+  sair: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5, borderColor: cores.linha },
+  sairSobre: { borderColor: '#B9CBB3' },
+  sairTexto: { fontFamily: fontes.forte, fontSize: 13, color: cores.tinta },
+  apostador: {
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: cores.marcaSuave,
+  },
+  apostadorTexto: { fontFamily: fontes.texto, fontSize: 16, color: cores.tintaSuave },
   servidor: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999 },
   servidor_acordando: { backgroundColor: '#F6E7B4' },
   servidor_online: { backgroundColor: '#D6EBD9' },
@@ -734,18 +780,6 @@ const estilos = StyleSheet.create({
   resumoForte: { fontFamily: fontes.forte, color: cores.tinta },
   linhaAposta: { flexDirection: 'row', gap: 12, alignItems: 'stretch' },
   linhaApostaEmPe: { flexDirection: 'column' },
-  campo: {
-    fontFamily: fontes.texto,
-    fontSize: 16,
-    color: cores.tinta,
-    borderWidth: 1.5,
-    borderColor: cores.linha,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    outlineColor: cores.folha,
-  },
   botao: {
     backgroundColor: cores.gema,
     borderRadius: 12,
