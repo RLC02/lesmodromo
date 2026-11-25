@@ -212,7 +212,7 @@ Como a lógica está num lugar só, todos os pontos críticos usam a mesma class
 
 ### Aqui 1: consumo da API de clima
 
-**Onde:** `framework/client/ClimaGatewayOpenMeteo`, com até 4 tentativas e timeout de 5 s cada. O fallback fica em `core/usecase/ProcessarCorrida`: se as tentativas acabarem, a corrida usa `Clima.PADRAO`.
+**Onde:** `framework/client/ClimaGatewayOpenMeteo`, com até 4 tentativas e timeout de 5 s cada. O fallback fica em `core/usecase/ConsultarClima`: se as tentativas acabarem, usa `Clima.PADRAO`. A corrida e a previsão do clima (o painel "Agora em…") usam esse mesmo caso de uso, então a regra não fica repetida.
 
 **No que ajudou:** API externa a gente não controla. Ela pode demorar, devolver erro 500 ou cair por alguns segundos. Sem retry, qualquer soluço da Open-Meteo travava a corrida. Com retry, a falha passageira nem aparece. E se a API cair de vez, o fallback deixa o jogo continuar.
 

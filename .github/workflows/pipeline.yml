@@ -59,9 +59,18 @@ jobs:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
           IMAGEM: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/lesmodromo-api:${{ github.sha }}
         run: |
+          # tira espaços e quebras de linha que vêm junto quando o secret é colado
+          HOOK=$(printf '%s' "$HOOK" | tr -d '[:space:]')
+          if [ -z "$HOOK" ]; then
+            echo "O secret RENDER_DEPLOY_HOOK_URL está vazio ou não existe."
+            echo "Cadastre em Settings > Secrets and variables > Actions, com a URL do Deploy Hook do Render."
+            exit 1
+          fi
+          IMAGEM_CODIFICADA=$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=''))" "$IMAGEM")
           curl --fail --silent --show-error \
             --retry 5 --retry-delay 10 --retry-all-errors \
-            -X POST --get "$HOOK" --data-urlencode "imgURL=$IMAGEM"
+            -X POST "${HOOK}&imgURL=${IMAGEM_CODIFICADA}"
+          echo "Render avisado: vai usar a imagem $IMAGEM"
 
       # RETRY 4: o Render demora alguns minutos para trocar a versão.
       # A pipeline fica perguntando /health até aparecer o commit novo.
@@ -70,6 +79,12 @@ jobs:
           API_URL: ${{ secrets.API_URL }}
           COMMIT: ${{ github.sha }}
         run: |
+          API_URL=$(printf '%s' "$API_URL" | tr -d '[:space:]')
+          API_URL=${API_URL%/}
+          if [ -z "$API_URL" ]; then
+            echo "O secret API_URL está vazio ou não existe. Cadastre com a URL do Render, ex: https://lesmodromo-api.onrender.com"
+            exit 1
+          fi
           for tentativa in $(seq 1 40); do
             RESPOSTA=$(curl --silent --max-time 30 "$API_URL/health" || true)
             if echo "$RESPOSTA" | grep -q "$COMMIT"; then
@@ -102,7 +117,11 @@ jobs:
 
       # A URL da API vem do secret, não do código
       - name: Cria o .env com a URL da API
-        run: echo "EXPO_PUBLIC_API_URL=${{ secrets.API_URL }}" > .env
+        env:
+          API_URL: ${{ secrets.API_URL }}
+        run: |
+          API_URL=$(printf '%s' "$API_URL" | tr -d '[:space:]')
+          echo "EXPO_PUBLIC_API_URL=${API_URL%/}" > .env
 
       - name: Instala a CLI da Vercel
         run: npm install --global vercel@latest

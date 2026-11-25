@@ -7,6 +7,8 @@ import java.util.Locale;
  */
 public final class Narrador {
 
+    private static final Locale BRASIL = Locale.of("pt", "BR");
+
     private Narrador() {
     }
 
@@ -16,10 +18,16 @@ public final class Narrador {
         String cidade = corrida.getCidade().getNome();
 
         String lance = switch (vencedora) {
-            case GOSMINHA -> String.format(Locale.ROOT, "aproveitou os %.0f%% de umidade", clima.umidade());
-            case LESMALDA -> String.format(Locale.ROOT, "se animou com os %.0f °C", clima.temperatura());
-            case DONA_BABA -> String.format(Locale.ROOT, "pegou carona no vento de %.0f km/h", clima.vento());
+            case GOSMINHA -> String.format(BRASIL, "aproveitou os %.0f%% de umidade", clima.umidade());
+            case LESMALDA -> String.format(BRASIL, "se animou com os %.0f °C", clima.temperatura());
+            case DONA_BABA -> String.format(BRASIL, "pegou carona no vento de %.0f km/h", clima.vento());
             case TURBO_MOLENGA -> "acordou inspirado e foi na pura sorte";
+            case BRASINHA -> String.format(BRASIL, "esquentou os motores com %.0f °C", clima.temperatura());
+            case MESTRE_ZEN -> String.format(BRASIL, "meditou no vento fraquinho de %.0f km/h", clima.vento());
+            case GAROA -> clima.chovendo()
+                    ? String.format(BRASIL, "abriu o guarda-chuva com %.1f mm de chuva", clima.chuva())
+                    : "abriu o guarda-chuva mesmo sem chuva e foi no embalo";
+            case BARAO -> String.format(BRASIL, "desfilou no ar seco de %.0f%% de umidade", clima.umidade());
         };
 
         String abertura = vencedora.getNome() + " " + lance + " em " + cidade + " e cruzou a linha em primeiro!";

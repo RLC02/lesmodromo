@@ -2,10 +2,16 @@
 
 Uma corrida de lesmas em que o clima de verdade decide quem ganha. Você escolhe a cidade, aposta numa lesma e o backend consulta o tempo naquela cidade agora:
 
-- **Gosminha** corre mais com o ar úmido.
-- **Lesmalda** gosta do frio.
-- **Dona Baba** pega carona no vento.
-- **Turbo Molenga** depende só da sorte.
+| Lesma | Corre melhor com | Acessório |
+|---|---|---|
+| Gosminha | umidade | laço e gotinha de orvalho |
+| Lesmalda | frio | gorro e cachecol |
+| Dona Baba | vento | óculos de aviadora e lenço |
+| Turbo Molenga | sorte (ignora o clima) | capacete de corrida |
+| Brasinha | calor | boné e óculos escuros |
+| Mestre Zen | calmaria (pouco vento) | faixa na testa |
+| Garoa | chuva | guarda-chuva |
+| Barão Babão | ar seco | cartola, monóculo e bigode |
 
 Se estiver chovendo, todas ganham bônus. Vitória vale 10 pontos no ranking, participação vale 1.
 
@@ -61,6 +67,8 @@ exchange lesmodromo.eventos (topic)
 Mensagem que falha 3 vezes → exchange lesmodromo.eventos.falhas → fila lesmodromo.falhas
 ```
 
+Antes da aposta, o front chama `GET /api/cidades/{cidade}/clima` (caso de uso `PreverPareo`), que mostra o clima de agora e a vantagem de cada lesma.
+
 O mesmo evento `corrida.finalizada` chega em duas filas, e cada consumidor faz a sua parte sem conhecer o outro. O front acompanha tudo pelo `GET /api/corridas/{id}`: o status muda de `NA_LARGADA` para `CORRENDO` e depois para `FINALIZADA`, e os campos `rankingAtualizado` e `narrada` viram `true` quando cada consumidor termina. O quadro "Bastidores" da tela mostra isso ao vivo.
 
 ## Retry, fallback e transação
@@ -69,7 +77,7 @@ Todo retry usa a mesma classe, `framework/resilience/RetryExecutor`. Ela tenta, 
 
 | Ponto crítico | Onde está o retry | Fallback se esgotar |
 |---|---|---|
-| API de clima | `client/ClimaGatewayOpenMeteo` (4 tentativas, timeout de 5 s) | `ProcessarCorrida` usa o clima padrão |
+| API de clima | `client/ClimaGatewayOpenMeteo` (4 tentativas, timeout de 5 s) | `ConsultarClima` usa o clima padrão (vale pra corrida e pra previsão) |
 | MongoDB Atlas | `persistence/CorridaGatewayMongo.salvar` (3) e `config/VerificadorDeConexoes` na subida (10) | erro 503, e o front tenta de novo |
 | RabbitMQ: publicar | `messaging/EventoGatewayRabbit` (3) | `LargarCorrida` roda o juiz direto e `ProcessarCorrida` atualiza o ranking direto |
 | RabbitMQ: consumir | `application.yml`, em `spring.rabbitmq.listener.simple.retry` (3) | a mensagem vai para a fila `lesmodromo.falhas` |

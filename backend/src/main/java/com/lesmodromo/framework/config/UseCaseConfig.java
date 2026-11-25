@@ -8,11 +8,13 @@ import com.lesmodromo.core.gateway.NarracaoGateway;
 import com.lesmodromo.core.gateway.RankingGateway;
 import com.lesmodromo.core.gateway.Transacao;
 import com.lesmodromo.core.usecase.AtualizarRanking;
+import com.lesmodromo.core.usecase.ConsultarClima;
 import com.lesmodromo.core.usecase.ConsultarCorrida;
 import com.lesmodromo.core.usecase.ConsultarRanking;
 import com.lesmodromo.core.usecase.LargarCorrida;
 import com.lesmodromo.core.usecase.ListarNarracoes;
 import com.lesmodromo.core.usecase.NarrarCorrida;
+import com.lesmodromo.core.usecase.PreverPareo;
 import com.lesmodromo.core.usecase.ProcessarCorrida;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,9 +39,19 @@ public class UseCaseConfig {
     }
 
     @Bean
-    public ProcessarCorrida processarCorrida(CorridaGateway corridas, ClimaGateway clima, EventoGateway eventos,
+    public ConsultarClima consultarClima(ClimaGateway climaGateway) {
+        return new ConsultarClima(climaGateway);
+    }
+
+    @Bean
+    public PreverPareo preverPareo(ConsultarClima consultarClima) {
+        return new PreverPareo(consultarClima);
+    }
+
+    @Bean
+    public ProcessarCorrida processarCorrida(CorridaGateway corridas, ConsultarClima consultarClima, EventoGateway eventos,
                                              AtualizarRanking atualizarRanking, Sorteio sorteio) {
-        return new ProcessarCorrida(corridas, clima, eventos, atualizarRanking, sorteio);
+        return new ProcessarCorrida(corridas, consultarClima, eventos, atualizarRanking, sorteio);
     }
 
     @Bean

@@ -3,7 +3,7 @@ import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'rea
 import Lesma from './Lesma';
 import { cores, coresDasLesmas, fontes } from '../tema';
 
-const LARGURA_LESMA = 60;
+const LARGURA_LESMA = 66;
 const LARGURA_CHEGADA = 14;
 
 function useMovimentoReduzido() {
@@ -110,7 +110,7 @@ export default function Pista({ lesmas, resultado, idDaLargada, onVencedoraChego
               ]}
               accessibilityLabel={`${l.nome}, raia ${l.numero}`}
             >
-              <Lesma cor={coresDasLesmas[l.codigo]} largura={LARGURA_LESMA} />
+              <Lesma codigo={l.codigo} largura={LARGURA_LESMA} />
             </Animated.View>
 
             <View style={estilos.chegada}>
@@ -132,9 +132,8 @@ export default function Pista({ lesmas, resultado, idDaLargada, onVencedoraChego
 const estilos = StyleSheet.create({
   moldura: {
     backgroundColor: cores.musgo,
-    borderRadius: 24,
-    padding: 16,
-    paddingTop: 20,
+    borderRadius: 20,
+    padding: 20,
   },
   gramado: {
     height: 10,
@@ -144,7 +143,7 @@ const estilos = StyleSheet.create({
   raia: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    height: 64,
+    height: 54,
     backgroundColor: cores.terra,
   },
   divisaoDeRaia: {
@@ -152,7 +151,7 @@ const estilos = StyleSheet.create({
     borderTopColor: cores.terraEscura,
   },
   placa: {
-    width: 156,
+    width: 170,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -173,8 +172,8 @@ const estilos = StyleSheet.create({
   gosma: {
     position: 'absolute',
     left: 0,
-    bottom: 6,
-    height: 9,
+    bottom: 4,
+    height: 8,
     borderTopRightRadius: 6,
     borderBottomRightRadius: 6,
     backgroundColor: cores.gosma,
@@ -188,7 +187,7 @@ const estilos = StyleSheet.create({
     opacity: 0.8,
     borderRadius: 1,
   },
-  lesma: { position: 'absolute', left: 0, bottom: 4 },
+  lesma: { position: 'absolute', left: 0, bottom: 2 },
   chegada: { position: 'absolute', right: 0, top: 0, bottom: 0, width: LARGURA_CHEGADA, justifyContent: 'space-between' },
   linhaXadrez: { flexDirection: 'row', flex: 1 },
   casa: { flex: 1, backgroundColor: '#F4F1E6' },

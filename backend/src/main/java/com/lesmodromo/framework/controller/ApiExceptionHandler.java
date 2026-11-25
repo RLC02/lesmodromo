@@ -7,9 +7,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Traduz as exceções em respostas HTTP. 4xx = o front não deve repetir; 5xx = vale o retry do front.
@@ -29,6 +32,27 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErroResponse naoEncontrada(CorridaNaoEncontradaException erro) {
         return new ErroResponse(erro.getMessage());
+    }
+
+    /** Endereço que não existe (ex: /healt em vez de /health). Antes caía no 500 genérico. */
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErroResponse enderecoInexistente(NoResourceFoundException erro) {
+        return new ErroResponse("Endereço não encontrado. Veja /health, /api/info e /api/ranking");
+    }
+
+    /** JSON mal formado no corpo da requisição. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErroResponse corpoInvalido(HttpMessageNotReadableException erro) {
+        return new ErroResponse("Corpo da requisição inválido");
+    }
+
+    /** Ex: GET num endereço que só aceita POST. */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public ErroResponse metodoNaoPermitido(HttpRequestMethodNotSupportedException erro) {
+        return new ErroResponse("Método não permitido neste endereço");
     }
 
     @ExceptionHandler(DataAccessResourceFailureException.class)

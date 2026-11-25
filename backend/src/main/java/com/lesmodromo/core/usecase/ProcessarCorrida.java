@@ -1,14 +1,11 @@
 package com.lesmodromo.core.usecase;
 
-import com.lesmodromo.core.domain.Clima;
-import com.lesmodromo.core.domain.ClimaMedido;
 import com.lesmodromo.core.domain.Colocacao;
 import com.lesmodromo.core.domain.Corrida;
+import com.lesmodromo.core.domain.LeituraDoClima;
 import com.lesmodromo.core.domain.Pista;
 import com.lesmodromo.core.domain.Sorteio;
-import com.lesmodromo.core.exception.ClimaIndisponivelException;
 import com.lesmodromo.core.exception.CorridaNaoEncontradaException;
-import com.lesmodromo.core.gateway.ClimaGateway;
 import com.lesmodromo.core.gateway.CorridaGateway;
 import com.lesmodromo.core.gateway.EventoGateway;
 
@@ -23,15 +20,15 @@ public class ProcessarCorrida {
     private static final System.Logger LOG = System.getLogger(ProcessarCorrida.class.getName());
 
     private final CorridaGateway corridas;
-    private final ClimaGateway climaGateway;
+    private final ConsultarClima consultarClima;
     private final EventoGateway eventos;
     private final AtualizarRanking atualizarRanking;
     private final Sorteio sorteio;
 
-    public ProcessarCorrida(CorridaGateway corridas, ClimaGateway climaGateway, EventoGateway eventos,
+    public ProcessarCorrida(CorridaGateway corridas, ConsultarClima consultarClima, EventoGateway eventos,
                             AtualizarRanking atualizarRanking, Sorteio sorteio) {
         this.corridas = corridas;
-        this.climaGateway = climaGateway;
+        this.consultarClima = consultarClima;
         this.eventos = eventos;
         this.atualizarRanking = atualizarRanking;
         this.sorteio = sorteio;
@@ -46,19 +43,11 @@ public class ProcessarCorrida {
         corrida.iniciar();
         corridas.salvar(corrida);
 
-        ClimaMedido medido;
-        boolean fallback = false;
-        try {
-            medido = climaGateway.medir(corrida.getCidade(), corrida.isModoCaos());
-        } catch (ClimaIndisponivelException erro) {
-            // FALLBACK: a API de clima não respondeu nem com retry. A corrida acontece com clima padrão.
-            LOG.log(System.Logger.Level.WARNING, "[fallback] usando clima padrão para {0}", corrida.getCidade().getNome());
-            medido = new ClimaMedido(Clima.PADRAO, erro.getTentativas());
-            fallback = true;
-        }
+        // Clima com retry no gateway e fallback no ConsultarClima
+        LeituraDoClima leitura = consultarClima.executar(corrida.getCidade(), corrida.isModoCaos());
 
-        List<Colocacao> resultado = Pista.correr(medido.clima(), sorteio);
-        corrida.finalizar(medido.clima(), medido.tentativas(), fallback, resultado);
+        List<Colocacao> resultado = Pista.correr(leitura.clima(), sorteio);
+        corrida.finalizar(leitura.clima(), leitura.tentativas(), leitura.fallback(), resultado);
         corridas.salvar(corrida);
 
         try {

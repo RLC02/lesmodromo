@@ -3,6 +3,8 @@ package com.lesmodromo.core.usecase;
 import com.lesmodromo.core.domain.Clima;
 import com.lesmodromo.core.domain.Corrida;
 import com.lesmodromo.core.domain.Jogador;
+import com.lesmodromo.core.domain.Lesma;
+import com.lesmodromo.core.domain.PrevisaoDoPareo;
 import com.lesmodromo.core.domain.StatusCorrida;
 import com.lesmodromo.core.exception.RegraDeNegocioException;
 import org.junit.jupiter.api.Test;
@@ -26,7 +28,8 @@ class FluxoDaCorridaTest {
 
     private final AtualizarRanking atualizarRanking = new AtualizarRanking(corridas, ranking, transacao);
     private final ProcessarCorrida processarCorrida =
-            new ProcessarCorrida(corridas, clima, eventos, atualizarRanking, () -> 0.5);
+            new ProcessarCorrida(corridas, new ConsultarClima(clima), eventos, atualizarRanking, () -> 0.5);
+    private final PreverPareo preverPareo = new PreverPareo(new ConsultarClima(clima));
     private final LargarCorrida largarCorrida = new LargarCorrida(corridas, eventos, processarCorrida);
     private final NarrarCorrida narrarCorrida = new NarrarCorrida(corridas, narracoes);
 
@@ -59,7 +62,7 @@ class FluxoDaCorridaTest {
         Corrida julgada = processarCorrida.executar(corrida.getId());
 
         assertEquals(StatusCorrida.FINALIZADA, julgada.getStatus());
-        assertEquals(4, julgada.getResultado().size());
+        assertEquals(Lesma.values().length, julgada.getResultado().size());
         assertEquals(List.of("corrida.largada", "corrida.finalizada"), eventos.publicados);
     }
 
@@ -124,6 +127,27 @@ class FluxoDaCorridaTest {
 
         assertThrows(RegraDeNegocioException.class, () -> largarCorrida.executar(semNome));
         assertFalse(eventos.publicados.contains("corrida.largada"));
+    }
+
+    @Test
+    void previsaoMostraOClimaDeAgoraEAFavorita() {
+        clima.clima = new Clima(20, 95, 2, 0); // muito úmido e sem vento
+
+        PrevisaoDoPareo previsao = preverPareo.executar("MANAUS");
+
+        assertEquals(Lesma.values().length, previsao.vantagens().size());
+        assertEquals(Lesma.GOSMINHA, previsao.vantagens().get(0).lesma());
+        assertFalse(previsao.leitura().fallback());
+    }
+
+    @Test
+    void previsaoSemApiDeClimaUsaClimaPadrao() {
+        clima.foraDoAr = true;
+
+        PrevisaoDoPareo previsao = preverPareo.executar("FORTALEZA");
+
+        assertTrue(previsao.leitura().fallback());
+        assertEquals(Clima.PADRAO, previsao.leitura().clima());
     }
 
     @Test

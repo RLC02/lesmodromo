@@ -27,6 +27,12 @@ public class HealthController {
         this.versao = versao;
     }
 
+    /** Página inicial da API. O Render e o navegador costumam bater aqui. */
+    @GetMapping("/")
+    public Map<String, String> inicio() {
+        return Map.of("mensagem", "Lesmódromo API no ar. Veja /health e /api/info");
+    }
+
     @GetMapping("/health")
     public Map<String, String> health() {
         Map<String, String> status = new LinkedHashMap<>();
