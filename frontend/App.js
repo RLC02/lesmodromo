@@ -216,7 +216,7 @@ export default function App() {
           Aposte numa lesma. O clima de agora decide quem ganha.
         </Text>
         <Text style={estilos.chamada}>
-          Cada lesma corre melhor num tipo de tempo. Na hora da largada, o servidor consulta o clima real da cidade
+          Lesmas são muito lentas. Na hora da largada, o servidor consulta o clima real da cidade
           escolhida e as lesmas correm de acordo.
         </Text>
       </View>
